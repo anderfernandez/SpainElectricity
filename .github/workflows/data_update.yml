@@ -26,7 +26,7 @@ jobs:
       - name: Execute python script 
         env: 
           URI: ${{ secrets.URI }}
-        run: python update_real_data.py
+        run: python get_raw_data.py
 
       - name: Push new data to github
         run: |
