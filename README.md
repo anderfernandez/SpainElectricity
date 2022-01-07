@@ -13,6 +13,9 @@ The data used in the dashboard comes from Red Electrica Española's public API. 
 All the information is refreshed hourly through automatic data extraction. 
 
 ## Dashboard
+
+> **Dashboard Access**: [https://share.streamlit.io/anderfernandez/spainelectricity/main/app/app.py](https://share.streamlit.io/anderfernandez/spainelectricity/main/app/app.py)
+
 The Spain Electricity Dashboard enables you to visualize each of the aforementioned variables in a more detailed way. The electricity price and demand evolution can be visualized in an hourly, daily or monthly basis, while the electricity generation can only been visualized in a daily or monthly basis. 
 
 Besides, all variables can be visualized for the whole Spain or either for one specific autonomous regions. 
