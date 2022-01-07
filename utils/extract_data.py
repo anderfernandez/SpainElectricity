@@ -2,7 +2,7 @@ import requests
 import pandas as pd
 import time
 
-def extract_realtime_price(start_datetime, end_datetime, geo_id = None):
+def extract_data(category, widget, start_datetime, end_datetime, data_granularity, geo_id = None):
     """ Given a timeperiod, extract realtime electricity price data from the spanish electricity market.
 
     Args:
@@ -39,15 +39,20 @@ def extract_realtime_price(start_datetime, end_datetime, geo_id = None):
 
     # Request data
     if geo_id is None:
-        url = f'https://apidatos.ree.es/es/datos/mercados/precios-mercados-tiempo-real?start_date={start_datetime}&end_date={end_datetime}&time_trunc=hour'
+        url = f'https://apidatos.ree.es/es/datos/{category}/{widget}?start_date={start_datetime}&end_date={end_datetime}&time_trunc={data_granularity}'
     else:
-        url = f'https://apidatos.ree.es/es/datos/mercados/precios-mercados-tiempo-real?start_date={start_datetime}&end_date={end_datetime}&time_trunc=hour&geo_id={geo_id}'
+        url = f'https://apidatos.ree.es/es/datos/{category}/{widget}?start_date={start_datetime}&end_date={end_datetime}&time_trunc={data_granularity}&geo_id={geo_id}'
     
     resp = requests.get(url)
     # Convert response to DataFrame
     data = pd.DataFrame(
     resp.json()['included'][0]['attributes']['values']
     )
+
+    data['api'] = category + '_' + widget
+    data['data_granularity'] = data_granularity
+
+    
 
     # Add autonomous region
     if geo_id is None:
@@ -60,13 +65,13 @@ def extract_realtime_price(start_datetime, end_datetime, geo_id = None):
     
     return data
 
-def wrapper_extract_realtime_price(x):
-    """Wrapper of the extract real time price function. It takes one tupple and runs the function.
+def wrapper_extract_data(x):
+    """Wrapper of the extract data function. It takes one tupple and runs the function.
 
     Args:
-        x (tuple): Tuple containing the information of start date, end date and autonomous region id.
+        x (tuple): Tuple containing the information of endpoint category & widget, start date, end date and autonomous region id.
 
     Returns:
         Dataframe: dataframe containing the required information.
     """
-    return extract_realtime_price(x[0], x[1], x[2])
+    return extract_data(x[0], x[1], x[2], x[3], x[4], x[5])

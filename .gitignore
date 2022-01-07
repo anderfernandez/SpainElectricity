@@ -3,3 +3,6 @@ spainelectricity
 
 # dev notebooks
 *.ipynb
+__pycache__
+forecast
+raw_data
