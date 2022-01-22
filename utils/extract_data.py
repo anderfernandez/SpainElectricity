@@ -1,6 +1,8 @@
 import requests
 import pandas as pd
 import time
+from datetime import datetime
+import itertools
 
 def extract_data(category, widget, start_datetime, end_datetime, data_granularity, geo_id = None):
     """ Given a timeperiod, extract realtime electricity price data from the spanish electricity market.
@@ -74,4 +76,92 @@ def wrapper_extract_data(x):
     Returns:
         Dataframe: dataframe containing the required information.
     """
-    return extract_data(x[0], x[1], x[2], x[3], x[4], x[5])
+
+    resp = extract_data(x[0], x[1], x[2], x[3], x[4], x[5])
+    return resp
+
+def red_electrica_data(
+    widget, widget_category, data_granularity,
+    possible_autonomous_regions, initial_date
+    ):
+    """Extracts and saves the data from the Red Electrica Española API.
+
+    Args:
+        widget (str): Name of the widget.
+        widget_category (str): [description]
+        data_granularity (str): [description]
+        possible_autonomous_regions (list): [description]
+        initial_date (str): Date from which to begin extracting the data. Date format must follow %Y-%m-%dT%H:%D
+
+    Returns:
+        str: Ok if function runs ok.
+    """
+
+    # Set end date as now
+    end_date = datetime.now().strftime('%Y-%m-%dT%H:%M')
+    
+    # I chunkify the dates every 480h
+    dates= pd.date_range(pd.Timestamp(initial_date), pd.Timestamp(end_date), freq = '480h').strftime('%Y-%m-%dT%H:%M').tolist()
+    dates.append(end_date)
+
+    # Create periods
+    date_periods = [(dates[i-1], dates[i]) 
+    for i, _ in enumerate(dates) if i >0]
+
+    # Find all possible combinations of date periods and autonomous regions
+    possible_options =  list(itertools.product(*[widget, possible_autonomous_regions, date_periods]))
+
+    # Convert each combination in a tuple
+    possible_options = [
+        (widget_category, widget, comb[2][0], comb[2][1], data_granularity, comb[1])  
+        for comb in possible_options
+        ]
+    
+    # Now, I parallelize the extractions to do so, I create a wrapper functiion
+    data = []
+    for i, opt in enumerate(possible_options):
+        try:
+            
+            tmp = wrapper_extract_data(opt)
+            data.append(tmp)
+        
+        # If error, then stop execution
+        except:
+            break
+    
+    if len(data)> 1:
+        # Combine the dat into a single dataframe
+        data = pd.concat(data)
+    else:
+        data = data[0] 
+            
+    # Turn the datetime to datetime 
+    data['datetime'] = pd.to_datetime(
+        data['datetime'],
+        format = '%Y-%m-%d %H:%M:%S',
+        utc=True
+        )
+    
+    # Create the files in the data folder
+    group = f'{widget_category}_{widget}'
+    
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    
+    # Get max data (not necesarilly end_date)
+    max_data = data['datetime'].max().strftime('%Y-%m-%dT%H:%M')
+
+    print(f'Guardo los datos como data/{group}/{timestamp}.pickle')
+    # Save the data as pickle
+    data.to_pickle(f'data/{group}/{timestamp}.pickle')
+    
+    print(f'Guardo last date en la ruta: data/{group}/last_date.txt')
+    # Save last date as txt
+    with open(f'data/{group}/last_date.txt', 'w') as f:
+        f.write(max_data)
+    
+    return 'Ok'
+
+
+def wrapper_red_electrica_data(x):
+    
+    return red_electrica_data(x[0], x[1], x[2], x[3], x[4])
