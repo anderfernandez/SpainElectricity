@@ -1,28 +1,26 @@
-## -- Load libs -- ##
+# Load libs
+
 import os
 
 import pandas as pd
 from datetime import datetime
-from utils.extract_data import wrapper_extract_data
+import importlib
+import utils
+
+importlib.reload(utils)
+from utils.extract_data import red_electrica_data
+
 from joblib import Parallel, delayed
 import itertools
-from datetime import datetime
 
-## -- Data -- ##
+os.getcwd()
+
 possible_autonomous_regions = [
     None, 8742, 8743, 8744, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17,
     20, 21
     ]
 
 widgets = ['demanda-tiempo-real', 'estructura-generacion', 'precios-mercados-tiempo-real']
-
-if 'last_date.txt' in os.listdir('data'):
-    with open('data/last_date.txt', 'r') as f:
-        initial_date = f.read()
-else:
-    initial_date = '2015-01-01T00:00'
-
-end_date = datetime.now().strftime('%Y-%m-%dT%H:%M')
 
 # Auxiliar data
 widget_category = {
@@ -37,43 +35,49 @@ data_granularity = {
     'precios-mercados-tiempo-real': 'hour'
 }
 
-# I chunckify the dates every 480h
-dates= pd.date_range(initial_date, end_date, freq = '480h').strftime('%Y-%m-%dT%H:%M').tolist()
-dates.append(end_date)
 
-# Create periods
-date_periods = [(dates[i-1], dates[i]) for i, _ in enumerate(dates) if i >0]
+# For each widget, I get the widget
+extract_categories = [widget_category.get(widget) for widget in widgets] 
 
-# Find all possible combinations of date periods and autonomous regions
-possible_options =  list(itertools.product(*[widgets, possible_autonomous_regions, date_periods]))
-
-# Convert each in a tuple
-possible_options = [
-    (widget_category.get(comb[0]), comb[0], comb[2][0], comb[2][1], data_granularity.get(comb[0]), comb[1])  
-    for comb in possible_options
-    ]
-
-# Now, I parallelize the extractions to do so, I create a wrapper functiion
-data = Parallel(n_jobs=-1)(delayed(wrapper_extract_data)(opt) for opt in possible_options)
-
-# Combine the dat into a single dataframe
-data = pd.concat(data)
-
-# Turn the datetime to datetime 
-data['datetime'] = pd.to_datetime(
-    data['datetime'],
-    format = '%Y-%m-%d %H:%M:%S',
-    utc=True
-    )
-
-# Save the data
-for group, group_data in data.groupby('api'):
-
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+# Initial dates
+initial_dates = []
     
-    # Save the data as pickle
-    group_data.to_pickle(f'data/{group}/{timestamp}.pickle')
+for i, widget in enumerate(widgets):
+    
+    intial_date_path = f'data/{extract_categories[i]}_{widget}'
+    if 'last_date.txt' in os.listdir(intial_date_path):
+    
+        with open(f'{intial_date_path}/last_date.txt', 'r') as f:
+            tmp = f.read()
+        
+    else:
+        tmp = '2015-01-01T00:00'
 
-# Save last date as txt
-with open('data/last_date.txt', 'w') as f:
-    f.write(end_date)
+    initial_dates.append(tmp)
+
+# End date
+end_date = datetime.now().strftime('%Y-%m-%dT%H:%M')
+
+# I combine everything
+input_data = [
+    (
+        widget,
+        extract_categories[i],
+        data_granularity.get(widget),
+        possible_autonomous_regions,
+        initial_dates[i]
+    ) 
+    for i, widget in enumerate(widgets)] 
+
+def wrapper_red_electrica_data(x):
+    
+    return red_electrica_data(x[0], x[1], x[2], x[3], x[4])
+
+for input in input_data:
+    
+    try:
+        wrapper_red_electrica_data(input)
+    
+    except:
+        # If error, pass and it will be retried next run
+        pass

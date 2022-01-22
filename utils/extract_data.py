@@ -67,18 +67,7 @@ def extract_data(category, widget, start_datetime, end_datetime, data_granularit
     
     return data
 
-def wrapper_extract_data(x):
-    """Wrapper of the extract data function. It takes one tupple and runs the function.
 
-    Args:
-        x (tuple): Tuple containing the information of endpoint category & widget, start date, end date and autonomous region id.
-
-    Returns:
-        Dataframe: dataframe containing the required information.
-    """
-
-    resp = extract_data(x[0], x[1], x[2], x[3], x[4], x[5])
-    return resp
 
 def red_electrica_data(
     widget, widget_category, data_granularity,
@@ -141,7 +130,16 @@ def red_electrica_data(
         format = '%Y-%m-%d %H:%M:%S',
         utc=True
         )
+    print(initial_date)
+    # Filter if I receive info previous to the initial date
+    initial_date_dt = pd.to_datetime(initial_date,  format='%Y-%m-%dT%H:%M:%S', utc = True)
     
+    data = data.loc[
+        data['datetime'] > initial_date_dt,
+        :
+    ] 
+    print( data['datetime'].min())
+
     # Create the files in the data folder
     group = f'{widget_category}_{widget}'
     
