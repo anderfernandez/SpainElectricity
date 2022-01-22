@@ -24,14 +24,12 @@ jobs:
           pip install -r requirements.txt
           
       - name: Execute python script 
-        env: 
-          URI: ${{ secrets.URI }}
         run: python get_raw_data.py
 
       - name: Push new data to github
         run: |
           git config --global user.name 'Ander Fernández'
           git config --global user.email 'anderfernandezj@gmail.com'
-          git add data/*
-          git commit -am "Automatically updated data"
+          git add -A
+          git commit -m "Automatically updated data"
           git push 
