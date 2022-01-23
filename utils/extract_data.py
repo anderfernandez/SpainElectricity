@@ -67,6 +67,17 @@ def extract_data(category, widget, start_datetime, end_datetime, data_granularit
     
     return data
 
+def wrapper_extract_data(x):
+    """Wrapper of the extract data function. It takes one tupple and runs the function.
+
+    Args:
+        x (tuple): Tuple containing the information of endpoint category & widget, start date, end date and autonomous region id.
+    Returns:
+        Dataframe: dataframe containing the required information.
+    """
+
+    resp = extract_data(x[0], x[1], x[2], x[3], x[4], x[5])
+    return resp
 
 
 def red_electrica_data(
